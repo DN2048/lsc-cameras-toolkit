@@ -1,6 +1,6 @@
 # LSC Camera Toolkit
 
-This project is the condensation of the work from [tasarren](https://github.com/tasarren/lsc-tuya-toolkiot)
+This project is the condensation of the work from [tasarren](https://github.com/tasarren/lsc-tuya-toolkit)
 focused on enabling RTSP support on the LSC cameras that I own (cameras you get on Action stores).
 
 Note: The steps here aren't doing anything risky to the camera BUT I'm not responsible if anything goes bad. Make sure you don't use a crappy card, a crappy reader, a crappy power plug/cable, don't have a crappy house electrical wiring and don't have a crappy crap.  **Do this at your own risk!**
@@ -15,7 +15,7 @@ The cameras are:
 <img height="300" src="images/lsc_solar_2k.jpg"/>
 
 
-For more information on what follows here visit [tasarren page](https://github.com/tasarren/lsc-tuya-toolkiot).
+For more information on what follows here visit [tasarren page](https://github.com/tasarren/lsc-tuya-toolkit).
 
 **I would recommend starting with the Basic setup just to check if your model / firmware even supports these hacks.**
 
@@ -68,7 +68,7 @@ To configure more advance settings, copy all the rest of the files in the sd_car
 
 In **/configs/hack.conf** you can toggle the hacks.
 
-During boot the hacks are applied (check [lsc tuya project](https://github.com/tasarren/lsc-tuya-toolkiot) for more info) or read the scripts.
+During boot the hacks are applied (check [lsc tuya project](https://github.com/tasarren/lsc-tuya-toolkit) for more info) or read the scripts.
 
 The login for telnet now is `root / telnet`.
 
