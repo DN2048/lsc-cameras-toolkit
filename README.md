@@ -1,207 +1,83 @@
-# LSC Camera  Root Toolkit
+# LSC Camera Toolkit
 
-This file documents the current firmware findings and a practical SD-card flow to boot custom scripts and keep local
-services.
+This project is the condensation of the work from [tasarren](https://github.com/tasarren/lsc-tuya-toolkiot)
+focused on enabling RTSP support on the LSC cameras that I own (cameras you get on Action stores).
 
-This findings belongs to version `6.2863.123` but it should work on any version, as long as you teak the config files.
+Note: The steps here aren't doing anything risky to the camera BUT I'm not responsible if anything goes bad. Make sure you don't use a crappy card, a crappy reader, a crappy power plug/cable, don't have a crappy house electrical wiring and don't have a crappy crap.  **Do this at your own risk!**
+
+The cameras are:
+- LSC Indoor IP Camera 1080p - FW 6.2802.78 - Anyka AK39 chip family (aka LSC Smart Connect 1080p IP Indoor Mini)
+
+<img height="300" src="images/lsc_indoor_1080p.jpg"/>
+
+- LSC Smart Solar Camera 3MP - FW 6.1.23 - Anyka AK39 chip family? (aka LSC Smart Solar Camera 2K / 3MP Gun metal) - **SUPPORT COMING SOON**, *hopefully*.
+
+<img height="300" src="images/lsc_solar_2k.jpg"/>
 
 
-Huge thanks to [guino/LSCOutdoor1080P](https://github.com/guino/LSCOutdoor1080P) because their findings allowed me to
-create this toolkit.
+For more information on what follows here visit [tasarren page](https://github.com/tasarren/lsc-tuya-toolkiot).
 
-If this project was useful to you, please consider supporting me.
+**I would recommend starting with the Basic setup just to check if your model / firmware even supports these hacks.**
 
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/tasarren)
+## What Changed
+This is the list of changes compared to the original project:
+- Updated the SW/HW settings files with the ones found in these firmwares
+- Fixed some issues with the scripts
+- Changed some of the default settings
+- Added alternative ways to some settings that don't seem to work.
+  - Disable LED light
+  - Disable night vision
+  - Remove timestamp
+- Start scripts directly instead of relying on the Anyka IPC service
+- Removed ONVIF scripts because in this firmware they don't work
+- Removed everything related to PTZ since these cameras don't have it
+- Removed unused files
+- Cleaned up code that wasn't doing anything
 
-## Key boot findings from the dump
+## Notes
+Before you go all crazy changing the HW/SW/anyka settings do keep in most of the time they won't work. The ones that seem to work more constantly are the HW ones. This is why there are hacks to do some of the stuff that should have been a toggle switch in these files. Maybe you get more lucky, maybe you figure out what's the problem and fix it, but me personally already lost countless hours trying to put the camera in the state I wanted and didn't explore more.
 
-- Boot chain: `init -> /etc/init.d/rcS -> /etc/init.d/rc.local -> /usr/sbin/main.sh`.
-- `main.sh` launches `/tmp/service.sh start` (copied from `/usr/sbin/service.sh`).
-- `service.sh` mounts TF card and checks marker files under `/mnt`.
-- If `_ht_ap_mode.conf` exists, firmware copies `/mnt/hostapd` to `/tmp/hostapd` and wifi scripts execute it.
-This is where we hijack the system. Because this is run before really starting the daemon/anyka_ipc, we can
-modify the system, and then allow normal startup with poisoned scripts.
-- If `_ht_get_log.conf` exists, firmware won't unmount our SD card from `/mnt` and will also dump debug logs into
-  `/ht_log` folder 
-- If `_ht_av_mode.conf` exists, an Audio/Video test will begin, booting up a FTP server to unknown purposes.
-- If `ak39_factory.ini` exists, the system will boot in factory testing mode
+## What do you need
+- The camera.
+- microSD card.
+- PC / smartphone / whatever with a card reader that you can use to write data to the microSD card.
+
+## Enabling RTSP (Basic setup)
+These steps enable RTSP on the camera with its default settings.
+- Turn off the camera and remove its card if inserted.
+- Copy `_ak39_factory.ini` from `sd_card` folder of this project to the card.
+- Inside the file you need to enter your Wi-Fi and network information (name, password and more). Unfortunately without this the camera won't connect to your Wi-Fi even if you already set it up in the LSC/Tuya app. At least mine didn't.
+  - If you don't know the gateway or any of the other paraments check the network information on your PC or smartphone.
+    - Note: DHCP is not available when using this basic setup.
+  - Don't forget that the IP address must be unique. Check your router's DHCP list or equivalent to know which ones are free.
+  - This IP is important since it's the one you are going to use to connect to the camera with RTSP.
+- Eject / unmount the card and put it in the camera.
+- Turn on the camera (plug the cable).
+- Wait for some woman speaking.
+- Wait for a loud beep.
+  - If you don't hear the beep after 1 minute it means the camera didn't connect to the Wi-Fi. Check if you made a mistake in the file from step 2.
+- After the beep you can check the live stream with the URL: `rtsp://CAMERA_IP:554/main_ch` on VLC for example and you should see and hear something. Replace CAMERA_IP with the actual IP you set up.
+- It's done! You now have the camera with RTSP working with its default settings.
+- As a bonus, you also have telnet open on port 23. However, currently the default credentials are unknown. You'll have to go with the Advance Setup if you really want a working telnet.
  
-This is the startup hijack point we keep using.
+## Advance Setup
+By default, the camera uses night-mode, does that loud beep at start up, the blue LED is always blinking, etc.
+We can tweak a few things.
 
-## SD payload layout
+To configure more advance settings, copy all the rest of the files in the sd_card directory to the card.
 
-Use `sd_card/` as the SD card root content:
+In **/configs/hack.conf** you can toggle the hacks.
 
-- `_ht_ap_mode.conf` - required marker to trigger custom `hostapd` execution.
-- `_ak39_factory.ini` - required marker to trigger factory test mode.
-- `hostapd` - launcher (executed by firmware; runs `hack.sh`).
-- `hack.sh` - tiny bootstrap called by `hostapd`.
-- `logs/` - persistent logs written to SD.
-- `custom/` - all custom scripts/configs/binaries.
+During boot the hacks are applied (check [lsc tuya project](https://github.com/tasarren/lsc-tuya-toolkiot) for more info) or read the scripts.
 
-## Factory Testing Mode
+The login for telnet now is `root / telnet`.
 
-On this firmware, an empty factory marker file enables a Factory Testing Mode 
-with a ready to use RTSP server.
-
-This is really all what you need if you only want a RTSP camera, without PTZ, just video.
-
-- Create an empty `_ak39_factory.ini` on the SD root (this repo includes an empty
-  `sd_card/_ak39_factory.ini`).
-- Reboot.
-- RTSP listens on port `554`.
-- The working URL on this device is:
-
-```
-rtsp://CAMERA_IP:554/main_ch
-```
-
-> If you get `RTSP/1.0 454 Session Not Found` on `/videoMain`, try `/main_ch`.
-
-Factory mode also plays loud startup prompt audio by default.
-In this SD payload you can disable it with:
-
-- `MUTE_FACTORY_PROMPT=1` in `sd_card/root_system/custom/configs/hack.conf`
-
-### What `_ak39_factory.ini` actually is
-
-From Ghidra analysis of `anyka_ipc`:
-
-- Factory mode is detected by `access("/tmp/_ak39_factory.ini", 0)`.
-- The file is parsed using `iniparser_load("/tmp/_ak39_factory.ini")`.
-- The code looks up keys in the `section:key` form (iniparser style), e.g.:
-    - `wifi_station:ssid`
-    - `wifi_station:passphrase`
-    - `wifi_station:ip`
-    - `wifi_station:netmask`
-    - `wifi_station:gateway`
-    - `aging_test:aging_value`
-
-Note: boot `service.sh` copies only the first 1024 bytes from SD (`dd ... bs=1024 count=1`), so keep this file small.
-
-## Telnet
-The Factory Test mode, enables a Telnet service by default on port 23, we inject `/etc/shadow` with `root` / `telnet`
-But you can also enable an alternative userless telnet by switching `TELNET=1` in `sd_card/custom/configs/hack.conf`
-
-## ONVIF
-
-This firmware includes an ONVIF mini stack:
-
-- `/usr/local/bin/mini_onvif_service.sh` starts `lighttpd`, `wsd_simple_server`, and `onvif_notify_server`.
-- In the SD payload, set `ONVIF=1` in `sd_card/custom/configs/hack.conf` to start it.
-
-Notes:
-
-- ONVIF uses port `8080` on this firmware (lighttpd).
-  ``- When `ONVIF=1`, the scripts write `logs/onvif_status.txt` on the SD card with process/port probes.
-  ``
-
-> You can also enable ONVIF with the stock Tuya APP by setting `bool_onvif_switch = 1` in `_ht_sw_settings.ini`
-
-### Configuring ONVIF profiles
-
-The ONVIF service uses `/usr/local/etc/onvif_simple_server.conf`.
-In this SD payload we can override it (non-flash) via a bind mount:
-
-- SD file: `sd_card/custom/configs/onvif_simple_server.conf`
-- Mounted to: `/usr/local/etc/onvif_simple_server.conf`
-
-### ONVIF PTZ helpers (SD-based)
-
-Some firmware builds advertise PTZ via ONVIF but do not ship the expected helper commands in `/usr/local/bin`.
-
-This payload provides replacements from SD:
-
-- `/tmp/sd/custom/scripts/ptz_move`
-- `/tmp/sd/custom/scripts/get_position`
-- `/tmp/sd/custom/scripts/is_moving`
-- `/tmp/sd/custom/scripts/ptz_presets.sh`
-
-The PTZ wrappers call:
-
-- `/tmp/sd/custom/bin/ptzctl`
-
-`ptzctl` reads PTZ settings directly from:
-
-- `sd_card/custom/configs/ptz.conf`
-
-Key tuning fields in `ptz.conf`:
-
-- `PAN_FD_ADDR`, `TILT_FD_ADDR`, `IOCTL_MOVE`
-- `PAN_INVERT`, `TILT_INVERT`,
-- `STEP_MULT`, `STEP_REPEAT`
-- `DEBUG_LOG` (set `1` to write `ptz.log`, `0` to disable PTZ logging)
-
-The ONVIF config points directly to these SD scripts when:
-
-- `ONVIF=1`
-- `ONVIF_PTZ=1`
-
-If PTZ actions fail in clients (for example Home Assistant), check:
-
-- `logs/ptz.log`
-
-### Building `ptzctl`:
-
-- `./build_ptzctl.sh`
-
-Docker-based isolated ARM build (recommended):
-
-- `./docker/build_binaries.sh`
-
-This uses a containerized ARM GCC toolchain and copies built artifacts back with `docker cp`.
-
-Default output path:
-
-- `sd_card/custom/bin/ptzctl`
-
-## Configuration-driven behavior
-
-All custom behavior is controlled by `custom/configs/hack.conf` (strict shell `KEY=value`).
-
-Important toggles:
-
-- `DUMP_FORCE=1` forces dump to run again even if done flag exists.
-
-## How to use (quick steps)
-
-1. Format SD card as FAT32.
-2. Tweak the config files in `sd_card/custom/configs/` folder.
-3. Copy everything from `sd_card/` to SD root.
-4. Boot camera with SD inserted.
-5. Connect via telnet to `YOUR_IP:23` or `YOUR_IP:24` if you enable `TELNET=1` in `hack.conf` as an alternative Telnet service
-6. Enjoy
-
-### What does it do
-1. Dumps the entire filesystem from your device into `sd_card/dumps` as a backup
-2. Injects some payloads to prevent regular boot.
-3. Creates `/etc/shadow` with an user `root` with password `telnet`
-> You can create your own password replacing `sd_card/shadow` file
-  
-For normal behavior:
-
-- Do not use the SD Card :)
-
-## Wi-Fi setup from SD
-You should use `sd_card/_ak39_factory.ini` to setup your Wi-Fi settings to allow Anyka IPC to set it up for you.
-> You can leave ip, netmask and gateway blank to use DHCP
-
-If you do not want to use this (whatever), ensure `_ak39_factory.ini` is empty and edit `sd_card/custom/configs/wifi.conf`.
-
-This will start wpa_supplicant with the settings provided in `wifi.conf`
-
-Notes:
-- `WIFI_MODE=none` leaves networking unchanged (stock firmware manages it).
-- The scripts use `wpa_supplicant` + `wpa_cli` via `/usr/sbin/station_connect.sh`.
-
-## Logs
-
-All custom logs are written to the SD card under `SD_DIR/logs/` (where `SD_DIR` is `/tmp/sd` on-device).
-
-# Tested with the following cameras:
-<img width="1080" height="1080" alt="image" src="https://github.com/user-attachments/assets/d4881226-0206-43f8-b0c3-6c31529379e6" />
-<img width="640" height="640" alt="image" src="https://github.com/user-attachments/assets/50867618-3154-48a8-a86b-f27a90150e3d" />
-
-Open an Issue or PR anytime.
-
-If you used the Toolkit to dump your camera filesystem (you should have a dump/ directory on the SD card) and your firmware is not 6.2863.123, please share the dump (or a link) in this repo so we can add support for your version. If the dump contains secrets (Wi-Fi credentials/keys), remove them before uploading.
+## FAQ
+- Do I need to add the cameras to the LSC/Tuya app first? No but I would recommend to pair it just to see if the cameras are working. 
+- Do the cameras need access to the Internet to work? No.
+- How do I invert the image? In *sensor_inv* in the `_ht_hw_settings.ini`.
+- In the Advance Setup can I use the `wifi.conf` to set up the Wi-Fi so that I have DHCP instead of manually in the ak39 file? Probably, I didn't test it.
+- What's the aging value in `_ak39_factory.ini`? No clue. Ask tasarren.
+- What is the chinese woman saying at boot? She's saying "you are a bad boy".
+- Does this work with other cameras/firmwares? I only have the mentioned cameras. You have to test it yourself. I'm 99.99% sure that just doing the "Enabling RTSP" part won't brick it.
+- Is it possible to do this or that? In theory, yes. In practice not so easy because these recent firmwares have been closed up so some settings have no effect and are probably leftovers from previous firmwares. So you have a lot of trial and error to do.

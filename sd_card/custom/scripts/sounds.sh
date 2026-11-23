@@ -1,16 +1,10 @@
 #!/bin/sh
 
 SD_DIR="/tmp/sd"
-DATETIME="$(date +%Y%m%d_%H%M%S)"
-LOG_FILE="${SD_DIR}/logs/sounds.${DATETIME}.log"
+LOG_FILE="${SD_DIR}/logs/sounds.log"
 CUSTOM_DIR="${SD_DIR}/custom"
-AUDIO_DIR="${CUSTOM_DIR}/audio"
 CFG_FILE="${CUSTOM_DIR}/configs/hack.conf"
-SILENT_FILE="${AUDIO_DIR}/silent.mp3"
-
-log() {
-    echo "[$(date +%Y-%m-%dT%H:%M:%S)] $*"
-}
+SILENT_FILE="${CUSTOM_DIR}/audio/silent.mp3"
 
 load_cfg() {
     # Defaults

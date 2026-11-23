@@ -3,16 +3,19 @@
 SD_DIR="/tmp/sd"
 CUSTOM_DIR="${SD_DIR}/custom"
 CFG_FILE="${CUSTOM_DIR}/configs/wifi.conf"
-DATETIME="$(date +%Y%m%d_%H%M%S)"
-LOG_FILE="${SD_DIR}/logs/wifi.${DATETIME}.log"
+LOG_FILE="${SD_DIR}/logs/wifi.log"
 
 log() {
-    echo "[$(date +%Y-%m-%dT%H:%M:%S)] $*" >> "${LOG_FILE}"
+    if [ "${LOGS}" = "1" ]; then
+        echo "[$(date +%Y-%m-%dT%H:%M:%S)] $*" >>"${LOG_FILE}"
+    fi
 }
+
 exec >>"${LOG_FILE}" 2>&1
 
 load_cfg() {
     # Defaults
+    LOGS=1
     MODE=none
     SSID=""
     PASS=""
@@ -44,7 +47,7 @@ start_sta() {
 
     mkdir -p /var/run/wpa_supplicant >/dev/null 2>&1 || true
 
-    cat > /tmp/wpa_supplicant.conf <<'EOF'
+    cat >/tmp/wpa_supplicant.conf <<'EOF'
 ctrl_interface=/var/run/wpa_supplicant
 update_config=1
 EOF
@@ -74,7 +77,7 @@ load_cfg
 log "wifi_apply starting (MODE=${MODE})"
 
 case "${MODE}" in
-    none|"")
+    none | "")
         log "MODE=none, leaving wifi unchanged (set WIFI_MODE=sta in wifi.conf)"
         # Try to put wifi back into station mode after AP hijack.
         killall udhcpd >/dev/null 2>&1 || true
