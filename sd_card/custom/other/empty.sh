@@ -1,0 +1,1 @@
+echo "something called $0"

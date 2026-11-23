@@ -11,10 +11,6 @@ STATE_DIR="${CUSTOM_DIR}/state"
 DUMP_MARKER="${STATE_DIR}/dump.done"
 CFG_FILE="${CONFIG_DIR}/hack.conf"
 
-log() {
-    echo "[$(date +%Y-%m-%dT%H:%M:%S)] $*"
-}
-
 load_cfg() {
     # Defaults
     DUMP_FORCE=0
